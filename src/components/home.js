@@ -208,9 +208,7 @@ export default function Home() {
             style={{
               width: "300px",
               textAlign: "left",
-              textOverflow: "ellipsis",
               overflow: "hidden",
-              whiteSpace: "nowrap",
             }}
           >
             {selectedHostedZone?.Name
