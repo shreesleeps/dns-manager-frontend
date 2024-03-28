@@ -254,7 +254,7 @@ export default function AddRecordModal({
             Value
             {recordValue !== ""
               ? recordType.authFunc(recordValue)
-                ? undefined
+                ? ""
                 : ` (not a valid ${recordType.key} DNS Record value)`
               : " (Required)"}
           </div>
@@ -316,8 +316,8 @@ export default function AddRecordModal({
                 setRecordName("");
                 setRecordValue("");
                 setRecordTTL("300");
+                setModalOpen(false);
               }
-              setModalOpen(false);
             }}
             type="primary"
           >

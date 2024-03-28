@@ -8,6 +8,7 @@ import {
 } from "../services/service";
 import {
   Button,
+  Card,
   Checkbox,
   ConfigProvider,
   Divider,
@@ -15,6 +16,7 @@ import {
   Input,
   Popover,
   Space,
+  Statistic,
   Table,
 } from "antd";
 import {
@@ -25,6 +27,8 @@ import {
 } from "@ant-design/icons";
 import AddRecordModal from "./modals/addRecordModal";
 import EditRecordModal from "./modals/editRecordModal";
+import { Bar } from "@ant-design/plots";
+import Title from "antd/es/typography/Title";
 
 export default function Home() {
   const [fake, setFake] = useState(1);
@@ -51,9 +55,10 @@ export default function Home() {
 
   const [dNSRecords, setDNSRecords] = useState([]);
   const [selectedDNSRecords, setSelectedDNSRecords] = useState([]);
+  const [dNSRecordsTypeData, setDNSRecordsTypeData] = useState([]);
 
   const [scrollParams, updateScrollParams] = useState({
-    y: window.innerHeight - 184.4,
+    y: window.innerHeight - 171,
     // x: window.innerWidth - 10,
   });
 
@@ -76,6 +81,24 @@ export default function Home() {
       s4() +
       s4()
     );
+  }
+
+  function getTypeOccurrences(dnsRecords) {
+    const typeOccurrences = {};
+    dnsRecords.forEach((record) => {
+      const { Type } = record;
+      if (typeOccurrences[Type]) {
+        typeOccurrences[Type]++;
+      } else {
+        typeOccurrences[Type] = 1;
+      }
+    });
+    const result = Object.keys(typeOccurrences).map((type) => ({
+      type,
+      value: typeOccurrences[type],
+    }));
+
+    return result;
   }
 
   const populateHostedZones = async () => {
@@ -124,7 +147,9 @@ export default function Home() {
       };
       const response = await getDNSRecordsAPI(payload);
       setDNSRecords(response);
-      console.log("getDNSRecords successfull:", response);
+      const temp = getTypeOccurrences(response);
+      setDNSRecordsTypeData(temp);
+      console.log("getDNSRecords successfull:", response, temp);
     } catch (e) {
       console.log("getDNSRecords faliled:", e);
     }
@@ -161,8 +186,16 @@ export default function Home() {
   }, [fake]);
 
   useEffect(() => {
-    if (selectedHostedZone.Id) getDNSRecords(selectedHostedZone.Id);
+    if (selectedHostedZone.Id) {
+      getDNSRecords(selectedHostedZone.Id);
+    }
   }, [selectedHostedZone]);
+
+  function countUniqueTypes(records) {
+    const uniqueTypes = new Set(records.map((record) => record.Type));
+    // Return the size of the Set, which represents the number of unique types
+    return uniqueTypes.size;
+  }
 
   return (
     <div
@@ -171,7 +204,6 @@ export default function Home() {
         width: "100vw",
         height: "100vh",
         flexDirection: "column",
-        backgroundColor: "green",
       }}
     >
       <div
@@ -181,8 +213,16 @@ export default function Home() {
           flexDirection: "row",
           display: "flex",
           gap: "10px",
+          padding: "10px",
+          boxSizing: "border-box",
+          alignItems:"center",
+          borderBottom: "1px solid grey",
         }}
       >
+        {" "}
+        <Title style={{ margin: "unset" }} level={5}>
+          Hosted Zone
+        </Title>
         <Dropdown
           menu={{
             items: hostedZones.map((item) => {
@@ -213,7 +253,7 @@ export default function Home() {
           >
             {selectedHostedZone?.Name
               ? selectedHostedZone?.Name
-              : "Select Hosted Zone"}
+              : "Slecte Hosted Zone"}
           </Button>
         </Dropdown>
         <Popover
@@ -337,7 +377,6 @@ export default function Home() {
         style={{
           width: "100%",
           flex: 1,
-          backgroundColor: "red",
           display: "flex",
           flexDirection: "row",
         }}
@@ -345,116 +384,185 @@ export default function Home() {
         <div
           style={{
             height: "100%",
-            backgroundColor: "yellow",
             width: "40%",
             display: "flex",
             flexDirection: "column",
+            padding: "0px 0px 10px 10px",
+            boxSizing: "border-box",
           }}
         >
-          <div style={{ width: "100%", height: "max-content" }}>infos</div>
-          <div style={{ width: "100%", flex: 1, backgroundColor: "blue" }}>
-            chart
+          <div
+            style={{
+              width: "100%",
+              height: "max-content",
+              display: "flex",
+              flexDirection: "row",
+              gap: "10px",
+              justifyContent: "space-around",
+              paddingTop: "10px",
+            }}
+          >
+            <Card style={{ width: "50%" }}>
+              <Statistic
+                style={{ width: "100%" }}
+                title="Total DNS Records"
+                value={dNSRecords.length}
+                precision={0}
+              />
+            </Card>
+            <Card style={{ width: "50%" }}>
+              <Statistic
+                style={{ width: "100%" }}
+                title="Total DNS Record Types"
+                value={countUniqueTypes(dNSRecords)}
+                precision={0}
+              />
+            </Card>
+          </div>
+          <div
+            style={{
+              width: "100%",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "end",
+            }}
+          >
+            <Bar
+              title="DNS Record Type Distribution"
+              xField="type"
+              yField="value"
+              colorField="type"
+              legend={{
+                color: { autoWrap: true, maxRows: 3, cols: 6 },
+              }}
+              data={dNSRecordsTypeData}
+            />
           </div>
         </div>
         <div
           style={{
             height: "100%",
-            backgroundColor: "yellowgreen",
             width: "60%",
             display: "flex",
             flexDirection: "column",
+            padding: "10px",
+            boxSizing: "border-box",
+            gap: "10px",
           }}
         >
-          <div style={{ width: "100%", height: "max-content" }}>
-            <Button
-              onClick={() => {
-                console.log(selectedDNSRecords);
-              }}
-            >
-              Print
-            </Button>
+          <div
+            style={{
+              width: "100%",
+              height: "max-content",
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+            }}
+          >
             <Button
               onClick={() => {
                 setOpen3(true);
               }}
               icon={<PlusOutlined />}
-            ></Button>
-            <Popover
-              content={
-                <div>
-                  <div style={{ paddingBottom: "10px", fontWeight: "bold" }}>
-                    {"Delete " +
-                      selectedDNSRecords.length.toString() +
-                      " selected DNS Records."}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      gap: "10px",
-                    }}
-                  >
-                    <Button
-                      onClick={() => {
-                        deleteDNSRecord(
-                          selectedDNSRecords,
-                          selectedHostedZone.Id
-                        );
-                        setSelectedDNSRecords([]);
-                        setOpen4(false);
-                      }}
-                      danger
-                    >
-                      Delete
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setOpen4(false);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              }
-              title="Confirm Delete"
-              trigger="click"
-              open={open4}
-              onOpenChange={(e) => {
-                setOpen4(e);
+            >
+              Create a DNS Record
+            </Button>
+            <div
+              style={{
+                width: "100%",
+                height: "max-content",
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "end",
+                gap: "10px",
               }}
             >
-              <Button icon={<DeleteFilled />} danger></Button>
-            </Popover>
-            <AddRecordModal
-              modalOpen={open3}
-              setModalOpen={setOpen3}
-              selectedHostedZone={selectedHostedZone}
-              dNSRecords={dNSRecords}
-              afterAdd={() => {
-                getDNSRecords(selectedHostedZone.Id);
-                setSelectedDNSRecords([]);
-              }}
-            />
-            <Button
-              disabled={selectedDNSRecords.length !== 1}
-              onClick={() => {
-                setOpen5(true);
-              }}
-              icon={<EditOutlined />}
-            ></Button>
-            <EditRecordModal
-              modalOpen={open5}
-              setModalOpen={setOpen5}
-              selectedHostedZone={selectedHostedZone}
-              selectedDNSRecords={selectedDNSRecords}
-              afterAdd={() => {
-                getDNSRecords(selectedHostedZone.Id);
-                setSelectedDNSRecords([]);
-              }}
-            />
+              <Popover
+                content={
+                  <div>
+                    <div style={{ paddingBottom: "10px", fontWeight: "bold" }}>
+                      {"Delete " +
+                        selectedDNSRecords.length.toString() +
+                        " selected DNS Records."}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        gap: "10px",
+                      }}
+                    >
+                      <Button
+                        onClick={() => {
+                          deleteDNSRecord(
+                            selectedDNSRecords,
+                            selectedHostedZone.Id
+                          );
+                          setSelectedDNSRecords([]);
+                          setOpen4(false);
+                        }}
+                        danger
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setOpen4(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                }
+                title="Confirm Delete"
+                trigger="click"
+                open={open4}
+                onOpenChange={(e) => {
+                  setOpen4(e);
+                }}
+              >
+                <Button
+                  disabled={selectedDNSRecords.length === 0}
+                  icon={<DeleteFilled />}
+                  danger
+                >
+                  Delete Records
+                </Button>
+              </Popover>
+              <AddRecordModal
+                modalOpen={open3}
+                setModalOpen={setOpen3}
+                selectedHostedZone={selectedHostedZone}
+                dNSRecords={dNSRecords}
+                afterAdd={() => {
+                  getDNSRecords(selectedHostedZone.Id);
+                  setSelectedDNSRecords([]);
+                }}
+              />
+              <Button
+                disabled={selectedDNSRecords.length !== 1}
+                onClick={() => {
+                  setOpen5(true);
+                }}
+                icon={<EditOutlined />}
+              >
+                Edit Record
+              </Button>
+              <EditRecordModal
+                modalOpen={open5}
+                setModalOpen={setOpen5}
+                selectedHostedZone={selectedHostedZone}
+                selectedDNSRecords={selectedDNSRecords}
+                afterAdd={() => {
+                  getDNSRecords(selectedHostedZone.Id);
+                  setSelectedDNSRecords([]);
+                }}
+              />
+            </div>
           </div>
-          <div style={{ width: "100%", flex: 1, backgroundColor: "orange" }}>
+          <div style={{ width: "100%", flex: 1 }}>
             {/* <EditOutlined /> */}
             <Table
               scroll={scrollParams}
